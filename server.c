@@ -126,7 +126,7 @@ int server(SERVER_STATUS *ServerInstance){
 	printf("Serving\n");
 	PeerSockFd = 0 ;
 	CurrentConnections = 0;
-	while (PeerSockFd = accept(SockFd, (struct sockaddr *)PeerAddr, &PeerAddrLen)){
+	while ((PeerSockFd = accept(SockFd, (struct sockaddr *)PeerAddr, &PeerAddrLen)) >= 0){
 		printf("\nRecieved a connection\n");
 		printf("Client Details\t");
 		Peer->ClientId = Server->ActiveClients;
@@ -134,7 +134,7 @@ int server(SERVER_STATUS *ServerInstance){
 		Peer->Request = NULL;
 		Addr = &PeerAddr->sin_addr;
 		Temp = inet_ntoa(*Addr);
-		memcpy(&Peer->Address, Temp, 20);
+		strncpy(Peer->Address, Temp, sizeof(Peer->Address)-1);
 		printf("Client address: %s connection id : %d\n", Peer->Address, CurrentConnections);
 		handleClient(Peer);
 		CurrentConnections++;
@@ -165,8 +165,8 @@ int handleClient(CLIENT *Master){
 		printf("Failed to allocate memory while handling request::handleclient(CLIENT *)\n");
 		return -1;
 	}
-	Window[1024] = '\0';
-	Request->Data[1024] = '\0';
+	Window[1023] = '\0';
+	Request->Data[1023] = '\0';
 	Client = Master;
 	SockFd = Client->FileDescriptor;
 	Client->Request = Request;
@@ -203,7 +203,8 @@ int parseRequest(REQUEST *Request){
 	char *Data, *Temp;
 	int  Size;
 	Temp = Data = Request->Request;
-	for(Size = 0; *Temp != '\r'; Temp++ ){
+	if(!Request || !Request->Request) return -1;
+	for(Size = 0; *Temp != '\r' && *Temp; Temp++ ){
 		//printf("%c", *Temp);
 		Size +=1;
 	}
@@ -276,7 +277,7 @@ int router(CLIENT *Client){
 	}
 	QueryStart, FragementStart, SecondPathBackslash, Extension = NULL;
 	File = Temp = Request->Path + 1;
-	for(int C = 0; C < (Request->PathSize - 1); Temp++, C++){
+	for(int C = 1; C < Request->PathSize; Temp++, C++){
 		if(*Temp == '/'){
 			SecondPathBackslash = Temp;
 		}
@@ -290,22 +291,30 @@ int router(CLIENT *Client){
 		}
 		//printf("[ %c ], ", *Temp);
 	}
+	Temp -=1;
 	//we know location, query, fragements are present 
-	if(SecondPathBackslash && *Request->RequestMethod == *Get){
+	if(SecondPathBackslash != NULL && *Request->RequestMethod == *Get){
 		if(Extension){
+			//printf("2nd / && ext present\n");
 			sendHTML(ClientSocketFd, File);
 			return 0;
-		}else if(File[Request->PathSize -1] != '/'){
-			snprintf(RelativePath, 255, "./%s", File);
+		}else if(*Temp != '/'){
+			//printf("2nd / &&  no ext path ends with no / ");
+			snprintf(RelativePath, 255, "./%s/index.html", File);
 			sendHTML(ClientSocketFd, RelativePath);
 			return 0;		
+		}else if( *Temp == '/'){
+			//printf("2nd / && no ext but path ends with a / %c \n", *--Temp);
+			snprintf(RelativePath, 255, "./%sindex.html", File);
+			sendHTML(ClientSocketFd, RelativePath);
 		}
-		//printf("Client Requested Directory\n");
-		snprintf(RelativePath, 255, "./%sindex.html", File);
-		sendHTML(ClientSocketFd, RelativePath);
 		return 0;
 	}
-	
+	if(SecondPathBackslash  == NULL && *Request->RequestMethod == *Get){
+		//printf("no 2nd / && no ext\n");
+		snprintf(RelativePath, 255, "./%s/index.html", File);
+		sendHTML(ClientSocketFd, RelativePath);
+	}
 	return 0;
 }
 int sendCss(int SocketFileDescriptor, char*FileName){
@@ -338,12 +347,15 @@ int sendHTML(int SocketFileDescriptor, char*FileName){
 	}
 	//send headers first later
 	//printf("Sending request\n");
+	
+	//zero read --- sendfile(socket_fd, file_fd, NULL, file_size);
 	write(SocketFileDescriptor, MIMEType, HeaderLen);
-	while((BytesRead = fread(Data, DataSize, DataLen, FileDescriptor))){
-		BytesSent = write(SocketFileDescriptor, Data, BytesRead);
+	//sendfile(SocketFileDescriptor, fileno(FileDescriptor), NULL, 4096);
+	while ((BytesSent = sendfile(SocketFileDescriptor, fileno(FileDescriptor), NULL, 4096)) > 0) {
 		TotalBytesSent += BytesSent;
 		//printf("Bytes read  from file : %d\tBytes sent to client socket : %d\n", BytesRead, BytesSent);
 	}
+	
 	printf("\tRequest sent, Total Bytes transferred: [ %d B]\n\n", TotalBytesSent);
 	free(Data);
 	return 0;
