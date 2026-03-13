@@ -1,8 +1,11 @@
-A minimalis Web Server written in the C programming language.
+A minimalist Web Server written in the C programming language.
 
-about me:
+about me
+
 	Author: Solomon Muchiri
+	
 	mail to: Sherifsolo9113@gmail.com
+	
  	Education: Degree in Applied Computing
  	
 {this is a LINUX IMPLIMENTATION }
@@ -20,6 +23,7 @@ PROCESS EXECUTION FLOW
 RUNNING PROGRAM
 
 The program accepts command line arguments -P, -A, [support for more later].
+
 	where: 
 		-P  denotes the port to server on { defaiult -P 80}
 		-A denotes the address the server will use to serve { default -A 0.0.0.0} binds on all network interfaces. 
@@ -32,7 +36,7 @@ The program accepts command line arguments -P, -A, [support for more later].
 
 This program servers the current working directory it was run from:
 
-	*Clients get only read access
+	*Clients get read-only access
 	*Request methods supported
 		1. GET --- fully functional
 		2. POST --- there's need to extract and process the data sent
@@ -46,6 +50,7 @@ This program servers the current working directory it was run from:
 COMPILATION
 
 if you have your own app.c implementation just link with server.c 
+
 	ordinary linking 
 		gcc -o app.exe app.c server.c
 

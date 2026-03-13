@@ -1,13 +1,11 @@
 COM = gcc
-COMFLAGS =
-#change target to your programs
-TARGET = app.exe
+COMFLAGS = -Wall
+TARGET = app
 
-#change main to your programs name
 all: $(TARGET)
 
 $(TARGET):
-	$(COM) -o $(TARGET) app.c server.c
+	$(COM) $(COMFLAGS) -o $(TARGET) app.c server.c
 
 clean:
 	rm -f *.o $(TARGET)
