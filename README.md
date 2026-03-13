@@ -46,13 +46,13 @@ This program servers the current working directory it was run from:
 COMPILATION
 
 if you have your own app.c implementation just link with server.c 
-ordinary linking 
-	gcc -o app.exe app.c server.c
+	ordinary linking 
+		gcc -o app.exe app.c server.c
 
-object file linking
-	first compile to object files 
-	gcc -c app.o app.c
-	gcc -c server.o server.c
-	then link the object files into an executable
-	gcc app.o server.o -o app.exe
+	object file linking
+		first compile to object files 
+		gcc -c app.o app.c
+		gcc -c server.o server.c
+		then link the object files into an executable
+		gcc app.o server.o -o app.exe
  
