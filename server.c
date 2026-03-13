@@ -18,6 +18,7 @@ const char *TsExt = ".ts";
 struct sockaddr_in SocketTemplate = {};
 SERVER_STATUS Status;
 const char * Dummy = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>Served By a Server written in C</title><head><body><p>This page was served from a server <span>3NCRYPT3D C0D3R<span> is writtig in C programming language.</p></body></html>";
+const int DummyLen = 296;
 const char *NotFound = "HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\nContent-Length: 13\r\n\r\n404 Not Found";
 const int NotFoundLen = 85;
 //FUNCTIONS
@@ -50,7 +51,7 @@ int printStatus(SERVER_STATUS *Stats){
 	if(!Stats){
 		return -1;
 	}
-	printf(" status for server socket ==> \n\n\tAddress : %s\n\n\tPort : %d  \n\n\tSocket file descriptor : %d\n\n\tListening-4-Connections : %d\n\n\tAccepting-Connections : %d\n\n", Stats->Address, Stats->Port, Stats->FileDescriptor, Stats->Listening, Stats->Accepting);
+	printf(" status for server socket ==> \n\tAddress : %s\n\tPort : %d  \n\tSocket file descriptor : %d\n\tListening-4-Connections : %d\n\tAccepting-Connections : %d\n", Stats->Address, Stats->Port, Stats->FileDescriptor, Stats->Listening, Stats->Accepting);
 	return 0;
 }
 int setUpListener(int Port, char *Address){
@@ -73,17 +74,17 @@ int setUpListener(int Port, char *Address){
 	SocketTemplate.sin_addr.s_addr = inet_addr(Addr);
 	SocketFd = socket(AF_INET, SOCK_STREAM, 0);
 	if( SocketFd == -1){
-		printf("Failed to get a socket file descriptor\n");
+		printf("Failed to get a socket file descriptor.\n");
 		return -1;
 	}
 	Prt = bind(SocketFd, (struct sockaddr*)&SocketTemplate, sizeof(SocketTemplate));
 	if(Prt == -1){
-		printf("Failed to bind to socket to address : %s:%d probably already in use \n", Addr, Port);
+		printf("Failed to bind to socket address : %s:%d probably already in use.\n", Addr, Port);
 		return -1;
 	}
 	Prt = listen(SocketFd, MAX_CONNECTIONS);
 	if(Prt == -1){
-		printf("Failed to set up Listener:::ERRNO == %d", errno);
+		printf("Failed to set up Listener:::ERRNO == %d.", errno);
 		return -1;
 	}
 	Status.FileDescriptor = SocketFd;
@@ -92,8 +93,7 @@ int setUpListener(int Port, char *Address){
 	Status.Peers = false;
 	Status.PeerCount = 0;
 	Status.ActiveClients = 0;
-	//Status.ActiveClientsAddr = 0;  memset 
-	printf("Succesfully set up TCP listener::details below\n\n");
+	printf("Succesfully set up TCP listener::details below.\n");
 	printStatus(&Status);
 	return 0;
 }
@@ -165,17 +165,17 @@ int handleClient(CLIENT *Master){
 		printf("Failed to allocate memory while handling request::handleclient(CLIENT *)\n");
 		return -1;
 	}
-	Window[1023] = '\0';
-	Request->Data[1023] = '\0';
+	Window[WindowSize] = '\0';
+	Request->Data[WindowSize] = '\0';
 	Client = Master;
 	SockFd = Client->FileDescriptor;
 	Client->Request = Request;
-	memset(Window, 0, 1023);
+	memset(Window, 0, WindowSize);
 	KeepAlive = true;
-	ReceivedBytes = read(SockFd, Window, 1023);
+	ReceivedBytes = read(SockFd, Window, WindowSize);
 	if(ReceivedBytes  <= 0){
 		printf("Could not read from client socket handleClient(CLIENT *)");
-	}
+	} 
 	memcpy(Request->Data, Window, ReceivedBytes);
 	printf("received %dB:\n", ReceivedBytes);
 	//printf("%s\n\n", Request->Data);
@@ -254,28 +254,18 @@ int parseRequest(REQUEST *Request){
 //GET HEAD OPTIONS POST PUT 
 	return 0;
 }
-
 int router(CLIENT *Client){
-	//call a cgi by parsing the request path { log/logapi?v=2&admin=true&secret=111111} variables { key=pair&key=pair } from the path
-	//if method = POST extract data from the request and return it
-	char *Temp, *SecondPathBackslash, *File;
+	char *Temp, *SecondPathBackslash, *File, *QueryStart, *FragementStart, *Extension;
 	int ClientSocketFd;
 	REQUEST *Request;
-	char *QueryStart;
-	char *FragementStart;
-	char *Extension;
 	char RelativePath[255];
+	Temp, SecondPathBackslash, File, QueryStart, FragementStart, Extension = NULL;
 	if(Client == NULL){
 		printf("Can not process data for non existing client:: router(CLIENT *) invalid request data address\n");
 		return -1;
 	}
 	Request = Client->Request;
 	ClientSocketFd = Client->FileDescriptor;
-	if(*Request->Path == '/' && *(Request->Path + 1) == '\0'){
-		sendHTML(ClientSocketFd, "index.html");
-		return 0;
-	}
-	QueryStart, FragementStart, SecondPathBackslash, Extension = NULL;
 	File = Temp = Request->Path + 1;
 	for(int C = 1; C < Request->PathSize; Temp++, C++){
 		if(*Temp == '/'){
@@ -291,19 +281,31 @@ int router(CLIENT *Client){
 		}
 		//printf("[ %c ], ", *Temp);
 	}
-	Temp -=1;
-	//we know location, query, fragements are present 
-	if(SecondPathBackslash != NULL && *Request->RequestMethod == *Get){
+	//we know if location, query, fragements are present
+	if(QueryStart != NULL){
+		//{ log/logapi?v=2&admin=true&secret=111111}
+	}
+	if(*Request->Path == '/' && *(Request->Path + 1) == '\0'){
+		if(*Request->RequestMethod == *Get ){
+			sendHTML(ClientSocketFd, "index.html");
+			return 0;
+		}else if(*Request->RequestMethod == *Post){
+			extractPostData();
+		}else{
+			sendDummyHTTP(ClientSocketFd);
+		}
+	}
+	if(SecondPathBackslash  != NULL && *Request->RequestMethod == *Get){
 		if(Extension){
 			//printf("2nd / && ext present\n");
 			sendHTML(ClientSocketFd, File);
 			return 0;
-		}else if(*Temp != '/'){
+		}else if(*(Request->Path + Request->PathSize) != '/'){
 			//printf("2nd / &&  no ext path ends with no / ");
 			snprintf(RelativePath, 255, "./%s/index.html", File);
 			sendHTML(ClientSocketFd, RelativePath);
 			return 0;		
-		}else if( *Temp == '/'){
+		}else if( *(Request->Path + Request->PathSize)  == '/'){
 			//printf("2nd / && no ext but path ends with a / %c \n", *--Temp);
 			snprintf(RelativePath, 255, "./%sindex.html", File);
 			sendHTML(ClientSocketFd, RelativePath);
@@ -315,10 +317,12 @@ int router(CLIENT *Client){
 		snprintf(RelativePath, 255, "./%s/index.html", File);
 		sendHTML(ClientSocketFd, RelativePath);
 	}
+	if(*Request->RequestMethod == *Post){
+		extractPostData();
+	}
 	return 0;
-}
+}//func extractPostData()
 int sendCss(int SocketFileDescriptor, char*FileName){
-
 }
 int sendHTML(int SocketFileDescriptor, char*FileName){
 	char *Data;
@@ -347,7 +351,6 @@ int sendHTML(int SocketFileDescriptor, char*FileName){
 	}
 	//send headers first later
 	//printf("Sending request\n");
-	
 	//zero read --- sendfile(socket_fd, file_fd, NULL, file_size);
 	write(SocketFileDescriptor, MIMEType, HeaderLen);
 	//sendfile(SocketFileDescriptor, fileno(FileDescriptor), NULL, 4096);
@@ -361,4 +364,15 @@ int sendHTML(int SocketFileDescriptor, char*FileName){
 	return 0;
 }
 int sendJavascript(int SocketFileDescriptor, char*FileName){
+}
+int sendDummyHTTP(int SocketFileDescriptor){
+	const char *MIMEType = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n";
+	int HeaderLen = 44;
+	if(!SocketFileDescriptor || SocketFileDescriptor < 0){
+		printf("Bad file descriptor in sendDummyHTTP(int).\n");
+		return -1;
+	}
+	write(SocketFileDescriptor, MIMEType, HeaderLen);
+	write(SocketFileDescriptor, Dummy, );
+	return 0;	
 }
