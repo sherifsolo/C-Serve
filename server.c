@@ -264,7 +264,7 @@ int handleClient(CLIENT *Master){
 		close(SockFd);
 		return 0;
 	}
-	//parseHeaders(Request);
+	parseHeaders(Request);
 	router(Client);
 	Client->Request = NULL;	
 	free(Request);
@@ -278,6 +278,23 @@ int handleClient(CLIENT *Master){
 int parseHeaders(REQUEST *Request){
 	//if coonection:Close close client socket and end the connection after processing and returning data if requested
 	//obtain platform, browser, referer;
+	REQUEST *Req;
+	char *Temp;
+	char *StartsAt;
+	const char *Del = "\r\n";
+	const char *Separator = " : ";
+	const char *End = "\r\n\r\n";
+	int Lines;
+	Lines = 0;
+	Req = Request;
+	StartsAt = Req->Headers;
+	for(Temp = StartsAt; strncmp(Temp, End, 8); Lines++){
+		if(strncmp(Temp, Del, 4) == 0){
+			printf("\r\n\t\t%s", StartsAt);
+			StartsAt = Temp;
+		}
+		Temp += 4;
+	}
 	return 0;
 }
 //url decode paths with special characters /BAD%20BOYZ%20CLUB%20-%20%20Buruklyn%20Boyz%20X%20Double%20Trouble,%20%20Big%20Yasa%20X%20Young%20NC%20[D8_N7fiVQgE].webm

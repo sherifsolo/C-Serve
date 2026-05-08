@@ -51,7 +51,7 @@ typedef struct {
 }SERVER_STATUS;
 
 
-// extern --- should be used for variables in .h files since they migth be
+// extern --- should be used for variables in .h files since they might be
 // included in multiple .c files resulting in redefination of variables which causes linking errors
 //REQUEST METHODS
 extern const char *Get;
