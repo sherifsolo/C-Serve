@@ -406,7 +406,6 @@ int router(CLIENT *Client){
 	if(*Request->Path == '/' && *(Request->Path + 1) == '\0'){
 		if(strcmp(Request->RequestMethod, Get) == 0 ){
 			sendHTML(ClientSocketFd, "index.html");
-			Client->KeepAlive = true;
 			return 0;
 		}else if(strncmp(Request->RequestMethod, Post, 4) == 0){
 			extractPostData();

@@ -7,7 +7,7 @@
 	make sure we send all the data in a file especially big files
 
 
-3.) After implementing the connection-keep-Alive feature:
-	The connection is kept live infinitely unless the header is Connection: close
-			know this causes the client to think theres still more data being passed from the server
-			this causes the client browser to  render the page unusable(DOS)
+FIXED        3.) After implementing the connection-keep-Alive feature:   
+			The connection is kept live infinitely unless the header is Connection: close
+				know this causes the client to think theres still more data being passed from the server
+				this causes the client browser to  render the page unusable(DOS)
