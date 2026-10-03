@@ -1,11 +1,13 @@
 COM = gcc
-COMFLAGS = -Wall
-TARGET = app
+COMFLAGS = -Wall #-g debug flags
+TARGET = app.exe
 
-all: $(TARGET)
+all: clean $(TARGET) run
 
 $(TARGET):
-	$(COM) $(COMFLAGS) -o $(TARGET) app.c server.c
+	$(COM) $(COMFLAGS) -o $(TARGET) app.c server.c 
 
+run:
+	./$(TARGET)
 clean:
-	rm -f *.o $(TARGET)
+	clear && rm -f  $(TARGET)

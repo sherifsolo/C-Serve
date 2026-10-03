@@ -1,0 +1,13 @@
+1.) we can not serve files with special characters since the names are url encoded and sent to the server
+			we recieve the url encoded string 
+					create a function to decode and return the actual path to us
+
+
+2.) we can not stream media i.e videos 
+	make sure we send all the data in a file especially big files
+
+
+3.) After implementing the connection-keep-Alive feature:
+	The connection is kept live infinitely unless the header is Connection: close
+			know this causes the client to think theres still more data being passed from the server
+			this causes the client browser to  render the page unusable(DOS)

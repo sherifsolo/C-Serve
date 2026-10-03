@@ -57,7 +57,7 @@ int printStatus(SERVER_STATUS *Stats){
 	if(!Stats){
 		return -1;
 	}
-	printf(" status for server socket ==> \n\tAddress : %s\n\tPort : %d  \n\tSocket file descriptor : %d\n\tListening-4-Connections : %d\n\tAccepting-Connections : %d\n", Stats->Address, Stats->Port, Stats->FileDescriptor, Stats->Listening, Stats->Accepting);
+	printf(" status for server socket ==> \n\tAddress : %s\n\tPort : %d  \n\tSocket file descriptor : %d\n\tListening-4-Connections : %d\n\tAccepting-Connections : %d\n\tLINK: *** http://%s:%d/ ***\n", Stats->Address, Stats->Port, Stats->FileDescriptor, Stats->Listening, Stats->Accepting, Stats->Address, Stats->Port);
 	return 0;
 }
 int setUpListener(int Port, char *Address){
@@ -168,7 +168,7 @@ int server(SERVER_STATUS *ServerInstance){
 				if(Ret == -1){
 					perror("Failed to add socket to epoll event watchdog");
 				}
-				printf("Added a socket to event queue %d ---> %lld\n", PeerSockFd, Server->ActiveClients);
+				printf("Added a socket to event queue %d ---> connection id %lld\n", PeerSockFd, Server->ActiveClients);
 				printf("Client Details\t");
 				Peer->ClientId = Server->ActiveClients;
 				Peer->FileDescriptor = PeerSockFd;
@@ -176,7 +176,7 @@ int server(SERVER_STATUS *ServerInstance){
 				Addr = &PeerAddr->sin_addr;
 				Temp = inet_ntoa(*Addr);
 				strncpy(Peer->Address, Temp, sizeof(Peer->Address)-1);
-				printf("Client address: %s connection id : %lld\n", Peer->Address, CurrentConnections);
+				printf("Client address: %s request id : %lld\n", Peer->Address, CurrentConnections);
 				CurrentConnections++;
 				Server->ActiveClients = CurrentConnections;
 				Peer++;
@@ -268,11 +268,10 @@ int handleClient(CLIENT *Master){
 	router(Client);
 	Client->Request = NULL;	
 	free(Request);
-	/*impliment parse headers first if(!Client->KeepAlive){
+	if(!Client->KeepAlive){
+		epoll_ctl(EpollFd, EPOLL_CTL_DEL, SockFd, NULL);
 		close(SockFd);	
-	}*/
-	epoll_ctl(EpollFd, EPOLL_CTL_DEL, SockFd, NULL);
-	close(SockFd);
+	}
 	return 0;
 }
 int parseHeaders(REQUEST *Request){
@@ -285,16 +284,34 @@ int parseHeaders(REQUEST *Request){
 	const char *Separator = " : ";
 	const char *End = "\r\n\r\n";
 	int Lines;
-	Lines = 0;
+	int BufferLen;
+	Lines = BufferLen = 0;
 	Req = Request;
 	StartsAt = Req->Headers;
-	for(Temp = StartsAt; strncmp(Temp, End, 8); Lines++){
-		if(strncmp(Temp, Del, 4) == 0){
-			printf("\r\n\t\t%s", StartsAt);
+	printf("\t\t@@PARSING HEADERS@@\n");
+	Temp = strtok(StartsAt, Del);
+	while(Temp){
+		if(Temp){
+			BufferLen = Temp - StartsAt;
+			strncat(Req->ParsedHeaders, StartsAt, BufferLen);
+			strncat(Req->ParsedHeaders+BufferLen, "||", 2);
 			StartsAt = Temp;
+			Lines++;
+		}		
+		printf("\t\t%s \n", Temp);
+		if( strncmp(Temp, "Connection", 10) == 0 ){
+			if( strncmp(Temp+12, "keep-alive", 10) == 0 ){
+				Request->KeepAlive = true;
+			}
+			else{
+				Request->KeepAlive = false;
+			}
 		}
-		Temp += 4;
+		Temp = strtok((char*)NULL, Del);
+
 	}
+	printf("\n\tprinted %d headers\n", Lines);
+	//printf("\n\nprinted %d headers\n\n%s\n", Lines, Req->ParsedHeaders);
 	return 0;
 }
 //url decode paths with special characters /BAD%20BOYZ%20CLUB%20-%20%20Buruklyn%20Boyz%20X%20Double%20Trouble,%20%20Big%20Yasa%20X%20Young%20NC%20[D8_N7fiVQgE].webm

@@ -26,6 +26,7 @@ typedef struct {
 	char *Path;
 	int PathSize;
 	char Data[1024];
+	char ParsedHeaders[1024];
 	bool KeepAlive;
 }REQUEST;
 
